@@ -1,13 +1,17 @@
 package com.gnanendraprasadp.springbatch.configuration;
 
+import com.gnanendraprasadp.springbatch.exception.BatchException;
+import com.gnanendraprasadp.springbatch.exception.ErrorListener;
 import com.gnanendraprasadp.springbatch.model.Customer;
 import com.gnanendraprasadp.springbatch.repository.CustomerRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.SkipListener;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.skip.SkipPolicy;
 import org.springframework.batch.item.data.RepositoryItemWriter;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.LineMapper;
@@ -43,8 +47,25 @@ public class BatchConfiguration {
                 .reader(itemReader())
                 .processor(itemProcessor())
                 .writer(itemWriter())
-                .taskExecutor(taskExecutor())
+                //.taskExecutor(taskExecutor())
+                .faultTolerant()
+                //.skipLimit(10)
+                //.skip(NumberFormatException.class)
+                //.noSkip(IllegalArgumentException.class)
+                .listener(skipListener())//need to be before skipPolicy
+                .skipPolicy(skipPolicy())
                 .build();
+    }
+
+    // custom method for skipPolicy
+    @Bean
+    public SkipPolicy skipPolicy() {
+        return new BatchException();
+    }
+
+    @Bean
+    public SkipListener<Customer,Number> skipListener(){
+        return new ErrorListener();
     }
 
     @Bean
@@ -63,7 +84,7 @@ public class BatchConfiguration {
         DelimitedLineTokenizer delimitedLineTokenizer = new DelimitedLineTokenizer();
         delimitedLineTokenizer.setDelimiter(",");
         delimitedLineTokenizer.setStrict(false);
-        delimitedLineTokenizer.setNames("id", "firstName", "lastName", "email", "gender", "contactNo", "country", "dob");
+        delimitedLineTokenizer.setNames("id", "firstName", "lastName", "email", "gender", "contactNo", "country", "dob", "age");
 
         BeanWrapperFieldSetMapper<Customer> fieldSetMapper = new BeanWrapperFieldSetMapper<>();
         fieldSetMapper.setTargetType(Customer.class);
